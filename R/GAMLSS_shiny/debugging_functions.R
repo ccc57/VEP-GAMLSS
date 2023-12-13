@@ -47,16 +47,16 @@ facet_plot = function(data, lines = F){
 }
 
 fit_model = function(model, data){
-  ypred = predict(model)
-  sigmapred = predict(model, what = "sigma")
+  ypred = predictAll(model, type = "terms", data = data)$mu[,1]
+  sigmapred = predictAll(model, type = "terms", data = data)$sigma[,1]
   
   ggdata = cbind(ypred, sigmapred, data[,c("xvar", "yvar")])
+  colnames(ggdata) = c("ypred","sigmapred","xvar","yvar")
   ggplot(ggdata, aes(x = xvar)) + 
     geom_line(linewidth = 1, aes(y = ypred, color = 'Predicted Mean')) + 
     geom_point(color = "#87A5C0", aes(y = yvar)) + 
     geom_ribbon(fill = "#6C0E23", alpha = .3, aes(ymin = ypred - sigmapred, 
-                                                  ymax = ypred + sigmapred, color = 'Predicted SD')) + 
-    ylab(input$yvar) + xlab(input$xvar) + scale_color_manual(name = "",
+                                                  ymax = ypred + sigmapred, color = 'Predicted SD')) + scale_color_manual(name = "",
                                                              breaks = c('Predicted Mean', 'Predicted SD'), 
                                                              values = c('Predicted Mean' = "darkblue",'Predicted SD' = "#6C0E23")) + 
     theme_bw() + ggtitle('Mu and Sigma Model Fit')
