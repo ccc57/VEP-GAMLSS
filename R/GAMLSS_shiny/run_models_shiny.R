@@ -1,4 +1,4 @@
-run_models <- function(data, covariates = NULL, criterion = "BIC", updateProgress = NULL, lambda = 1, family = "NO"){
+run_models <- function(data, covariates = NULL, criterion = "BIC", updateProgress = NULL, lambda = 1, family = "NO", random = FALSE){
   
   # Progress bar function
   update = function(n){
@@ -24,11 +24,18 @@ run_models <- function(data, covariates = NULL, criterion = "BIC", updateProgres
     GAIC3_expr = expr(!!GAIC3_expr + pb(!!col, method = "GAIC", k = 3))
   }
   
+  ML_expr_sub = ML_expr
+  AIC_expr_sub = AIC_expr
+  BIC_expr_sub = BIC_expr
+  GAIC3_expr_sub = GAIC3_expr
+  
   # Adding random subject effects
-  ML_expr_sub = expr(!!ML_expr + random(subject_id, lambda = lambda))
-  AIC_expr_sub = expr(!!AIC_expr + random(subject_id, lambda = lambda))
-  BIC_expr_sub = expr(!!BIC_expr + random(subject_id, lambda = lambda))
-  GAIC3_expr_sub = expr(!!GAIC3_expr + random(subject_id, lambda = lambda))
+  if(random == TRUE){
+    ML_expr_sub = expr(!!ML_expr + random(subject_id, lambda = lambda))
+    AIC_expr_sub = expr(!!AIC_expr + random(subject_id, lambda = lambda))
+    BIC_expr_sub = expr(!!BIC_expr + random(subject_id, lambda = lambda))
+    GAIC3_expr_sub = expr(!!GAIC3_expr + random(subject_id, lambda = lambda))
+  }
   
   # Running models
   tryCatch(
