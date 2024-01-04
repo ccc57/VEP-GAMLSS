@@ -8,7 +8,6 @@
 
 
 rm(list = ls())
-setwd("C:/Users/chris/OneDrive - Yale University/Projects/GAMLSS/R/GAMLSS_shiny")
 library(gamlss)
 library(readr)
 library(dplyr)
@@ -24,8 +23,10 @@ ui = fluidPage(
   sidebarLayout(
     sidebarPanel(
       fileInput("dataFile", "Data"),
+      p("Data file should be in .csv format. Check column names in the getFile function of the app.R file."),
       uiOutput("xvarSelect"),
       uiOutput("yvarSelect"),
+      uiOutput("randomSelect"),
       uiOutput("covSelect"),
       uiOutput("critSelect"),
       uiOutput("lambdaSelect"),
@@ -120,6 +121,10 @@ server = function(input, output, session) {
     df = getFile()
     selectInput("yvar", "Select predicted variable", choices = colnames(df), selected = "peak_latency_P1")
   })
+  output$randomSelect = renderUI({
+    df = getFile()
+    checkboxInput("random",label = "Random effect of subject? (Centile predictions will be unavailable)", value = FALSE)
+  })
   output$covSelect = renderUI({
     df = getFile()
     checkboxGroupInput("covariates", "Choose covariates if desired",choices = colnames(df))
@@ -154,7 +159,8 @@ server = function(input, output, session) {
                criterion = input$crit, 
                updateProgress = updateProgress,
                lambda = input$lambda,
-               family = input$family)
+               family = input$family, 
+               random = input$random)
   })
   
   # Outputs
@@ -162,6 +168,7 @@ server = function(input, output, session) {
   # Model information
   output$call = renderPrint({
     summary(model())
+    print(model()$mu.formula)
   })
   output$edf = renderPrint({
     edfAll(model())
@@ -169,8 +176,10 @@ server = function(input, output, session) {
   
   # Plot of model fit
   output$line = renderPlot({
-    ypred = predict(model())
-    sigmapred = predict(model(), what = "sigma")
+    # ypred = predict(model())
+    # sigmapred = predict(model(), what = "sigma")
+    ypred = predictAll(model(), data = modifyDf())$mu
+    sigmapred = predictAll(model(), data = modifyDf())$sigma
     
     ggdata = cbind(ypred, sigmapred, modifyDf()[,c("xvar", "yvar")])
     ggplot(ggdata, aes(x = xvar)) + 
@@ -195,19 +204,10 @@ server = function(input, output, session) {
   output$centilePlot = renderPlot({
     centiles(model(), xvar = modifyDf()$xvar, 
              xlab = input$xvar, ylab = input$yvar)
-    # req(input$splits)
-    # if(input$splits > 1){
-    #   centiles.split(model(), xvar = modifyDf()$xvar, n.inter = input$splits)
-    # }
-    # else
-    #   centiles(model(), xvar = modifyDf()$xvar)
   })
   output$centileFanPlot = renderPlot({
     centiles.fan(model(), xvar = modifyDf()$xvar, xlab = input$xvar,ylab = input$yvar,
                  points = T, colors = "cm")
-  })
-  output$centileScores = renderText({
-    centiles.pred
   })
   
   # Plot of model coefficients
@@ -263,9 +263,8 @@ server = function(input, output, session) {
     },
     content = function(file) {
       # Write the dataset to the `file` that will be downloaded
-      scores = centiles.pred(m,type = "z-scores", xname = "xvar", 
-                             xvalues = modifyDf()$xvar,yval = modifyDf()$yvar, data = modifyDf(), plot = F)
-      write.csv(scores, file)
+      write.csv(centiles.pred(model(),type = "z-scores", xname = "xvar", 
+                              xvalues = modifyDf()$xvar, yval = modifyDf()$yvar, data = modifyDf(), plot = F), file)
     }
   )
   
@@ -276,9 +275,8 @@ server = function(input, output, session) {
     },
     content = function(file) {
       # Write the dataset to the `file` that will be downloaded
-      curves = centiles.pred(m, xname = "xvar", 
-                             xvalues = modifyDf()$xvar, data = modifyDf(), plot = F)
-      write.csv(curves, file)
+      write.csv(centiles.pred(model(), xname = "xvar", 
+                              xvalues = modifyDf()$xvar, data = modifyDf(), plot = F), file)
     }
   )
 }
