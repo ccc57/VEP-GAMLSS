@@ -41,44 +41,52 @@ run_models <- function(data, covariates = NULL, criterion = "BIC", updateProgres
   tryCatch(
     {
       if(criterion == "AIC"){
-        model = gamlss(eval(expr(yvar ~ !!AIC_expr_sub)), 
-                       sigma.fo = eval(expr(~ !!AIC_expr)), 
-                       tau.formula = eval(expr(~ !!AIC_expr)), 
-                       nu.formula = eval(expr(~ !!AIC_expr)), 
-                       family = family,
-                       method = mixed(10, 50),
-                       data = as.data.frame(data))
+        model_call = call("gamlss", expr(yvar ~ !!AIC_expr_sub),
+                          sigma.fo = expr(~ !!AIC_expr), 
+                          tau.formula = expr(~ !!AIC_expr),
+                          nu.formula = expr(~ !!AIC_expr),
+                          family = family,
+                          method = expr(mixed(10, 50)),
+                          data = data)
+        model = eval(model_call)
       } else if(criterion == "ML"){
-        model = gamlss(eval(expr(yvar ~ !!ML_expr_sub)), 
-                             sigma.fo = eval(expr(~ !!ML_expr)), 
-                             tau.formula = eval(expr(~ !!ML_expr)), 
-                             nu.formula = eval(expr(~ !!ML_expr)),
-                             family = family,
-                             method = mixed(10,50),
-                             data = as.data.frame(data))
+        model_call = call("gamlss", expr(yvar ~ !!ML_expr_sub),
+                          sigma.fo = expr(~ !!ML_expr), 
+                          tau.formula = expr(~ !!ML_expr),
+                          nu.formula = expr(~ !!ML_expr),
+                          family = family,
+                          method = expr(mixed(10, 50)),
+                          data = data)
+        model = eval(model_call)
       } else if(criterion == "BIC"){
-        model = gamlss(eval(expr(yvar ~ !!BIC_expr_sub)), 
-                              sigma.fo = eval(expr(~ !!BIC_expr)), 
-                              tau.formula = eval(expr(~ !!BIC_expr)), 
-                              nu.formula = eval(expr(~ !!BIC_expr)), 
-                              family = family,
-                              method = mixed(10, 50), 
-                              data = as.data.frame(data))
+        model_call = call("gamlss", expr(yvar ~ !!BIC_expr_sub),
+                        sigma.fo = expr(~ !!BIC_expr), 
+                        tau.formula = expr(~ !!BIC_expr),
+                        nu.formula = expr(~ !!BIC_expr),
+                        family = family,
+                        method = expr(mixed(10, 50)),
+                        data = data)
+        model = eval(model_call)
+        # model = gamlss(eval(expr(yvar ~ !!BIC_expr_sub)), 
+        #                       sigma.fo = eval(expr(~ !!BIC_expr)), 
+        #                       tau.formula = eval(expr(~ !!BIC_expr)), 
+        #                       nu.formula = eval(expr(~ !!BIC_expr)), 
+        #                       family = family,
+        #                       method = mixed(10, 50), 
+        #                       data = data)
       } else if(criterion == "GAIC3"){
-        model = gamlss(eval(expr(yvar ~ !!GAIC3_expr_sub)), 
-                                sigma.fo = eval(expr(~ !!GAIC3_expr)), 
-                                tau.formula = eval(expr(~ !!GAIC3_expr)), 
-                                nu.formula = eval(expr(~ !!GAIC3_expr)), 
-                                family = family,
-                                method = mixed(10, 50),
-                                data = as.data.frame(data))
-        
-        model$formula = as.character(eval(expr(yvar ~ !!GAIC3_expr)))
+        model_call = call("gamlss", expr(yvar ~ !!GAIC3_expr_sub),
+                          sigma.fo = expr(~ !!GAIC3_expr), 
+                          tau.formula = expr(~ !!GAIC3_expr),
+                          nu.formula = expr(~ !!GAIC3_expr),
+                          family = family,
+                          method = expr(mixed(10, 50)),
+                          data = data)
+        model = eval(model_call)
       }
     },
     error = function(e){
-      message("An error occurred - most likely the model failed to converge. Try a different model or criterion. Here's the error message:\n",e)
-      model = NULL
+      message("An error occurred in run_models_shiny.R - most likely the model failed to converge. Try a different model or criterion. Here's the error message:\n",e)
     },
     finally = {
       update(4)

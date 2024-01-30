@@ -14,16 +14,21 @@ library(dplyr)
 library(ggplot2)
 library(shiny)
 
+# ***Edit these to for your data as needed***
+subject_id_column = "subject_id" # Name of column containing subject IDs
+first_column = "subject_id" # Choose the first column in the range of columns you wish to use
+last_column = "peak_latency_N2" # Choose the last column in the range of columns you wish to use
+default_xvar = "vep_age_days" # Choose a default explanatory variable
+default_yvar = "peak_latency_P1" # Choose a default predicted variable
 
 source("run_models_shiny.R") # Contains model functions
-# source("debugging_functions.R") To be removed
 
 ui = fluidPage(
   titlePanel("GAMLSS for Brain Centile Curves"),
   sidebarLayout(
     sidebarPanel(
       fileInput("dataFile", "Data"),
-      p("Data file should be in .csv format. Check column names in the getFile function of the app.R file."),
+      p("Data file should be in .csv format. Check column name assignment in the app.R file."),
       uiOutput("xvarSelect"),
       uiOutput("yvarSelect"),
       uiOutput("randomSelect"),
@@ -52,6 +57,8 @@ ui = fluidPage(
         br(),
         h4("Coefficients for each distribution parameter"),
         plotOutput("parameters"),
+        h4("Plots for each model term"),
+        plotOutput("termPlot"),
         br(),
         downloadButton("downloadModel", "Save Model"),
         downloadButton("downloadScores", "Save Centile Z Scores"),
@@ -63,8 +70,8 @@ ui = fluidPage(
         p("See ", a("Buuren & Fredriks 2001", href = "https://onlinelibrary.wiley.com/doi/10.1002/sim.746"),
           "Table II for interpretation:"),
         plotOutput("wpInterpretation"),
-        p("Excluded points in each plot - more exclusions indicates greater # of outliers and worse model fit."),
-        verbatimTextOutput("wpText"),
+        # p("Excluded points in each plot - more exclusions indicates greater # of outliers and worse model fit."),
+        # verbatimTextOutput("wpText"),
         br(),
         h4('Another Plot of Residuals'),
         p("Residuals should be normally distributed"),
@@ -86,14 +93,14 @@ ui = fluidPage(
 server = function(input, output, session) {
   
   # Load and process data
-  # You may need to make changes here if your variable names are different
   getFile = reactive({
     file = input$dataFile
     req(file)
     
-    read_csv(file$datapath) %>% 
-      dplyr::mutate(subject_id = as.factor(subject_id)) %>%
-      dplyr::select(subject_id:peak_latency_N2)
+    data = read_csv(file$datapath) %>% 
+      dplyr::mutate(subject_id = as.factor(subject_id_column)) %>%
+      dplyr::select(all_of(first_column):all_of(last_column))
+    
   })
   
   # Runs when "Run GAMLSS" is pressed
@@ -115,11 +122,11 @@ server = function(input, output, session) {
   #User inputs
   output$xvarSelect = renderUI({
     df = getFile()
-    selectInput("xvar", "Select explanatory variable", choices = colnames(df), selected = "vep_age_days")
+    selectInput("xvar", "Select explanatory variable", choices = colnames(df), selected = default_xvar)
   })
   output$yvarSelect = renderUI({
     df = getFile()
-    selectInput("yvar", "Select predicted variable", choices = colnames(df), selected = "peak_latency_P1")
+    selectInput("yvar", "Select predicted variable", choices = colnames(df), selected = default_yvar)
   })
   output$randomSelect = renderUI({
     df = getFile()
@@ -167,8 +174,9 @@ server = function(input, output, session) {
   
   # Model information
   output$call = renderPrint({
-    summary(model())
-    print(model()$mu.formula)
+    m = model()
+    m$call[["data"]] = "data"
+    summary(m)
   })
   output$edf = renderPrint({
     edfAll(model())
@@ -176,8 +184,6 @@ server = function(input, output, session) {
   
   # Plot of model fit
   output$line = renderPlot({
-    # ypred = predict(model())
-    # sigmapred = predict(model(), what = "sigma")
     ypred = predictAll(model(), data = modifyDf())$mu
     sigmapred = predictAll(model(), data = modifyDf())$sigma
     
@@ -192,6 +198,8 @@ server = function(input, output, session) {
                                                    values = c('Predicted Mean' = "darkblue",'Predicted SD' = "#6C0E23")) + 
       theme_bw() + ggtitle('Mu and Sigma Model Fit')
   })
+  
+  # Measures of model fit
   output$fit = renderText({
     paste("<b>Model fit:</b>",
           "<br>","r = ", round(cor(predict(model()),modifyDf()$yvar),2), 
@@ -210,18 +218,49 @@ server = function(input, output, session) {
                  points = T, colors = "cm")
   })
   
+  # Download handler for downloading centile data
+  # Handler for downloading z scores
+  output$downloadScores = downloadHandler(
+    filename = function() {
+      # Use the selected dataset as the suggested file name
+      paste0("centile_zscores_",input$yvar,".csv")
+    },
+    content = function(file) {
+      # Write the dataset to the `file` that will be downloaded
+      write.csv(centiles.pred(model(),type = "z-scores", xname = "xvar", 
+                              xvalues = modifyDf()$xvar, yval = modifyDf()$yvar, data = modifyDf(), plot = F), file)
+    }
+  )
+  # Handler for downloading centile curves
+  output$downloadCurves = downloadHandler(
+    filename = function() {
+      # Use the selected dataset as the suggested file name
+      paste0("centile_data_",input$yvar,".csv")
+    },
+    content = function(file) {
+      # Write the dataset to the `file` that will be downloaded
+      write.csv(centiles.pred(model(), xname = "xvar", 
+                              xvalues = modifyDf()$xvar, data = modifyDf(), plot = F), file)
+    }
+  )
+  
   # Plot of model coefficients
   output$parameters = renderPlot({
     fittedPlot(model(), x = modifyDf()$xvar, xlab = input$xvar)
+  })
+  
+  # Plot of model terms
+  output$termPlot = renderPlot({
+    term.plot(model(), ask = FALSE, pages = 1)
   })
   
   # Worm plots
   output$wp = renderPlot({
     wp(xvar = modifyDf()$xvar, resid = resid(model()), n.inter = 12, mar = c(1, 1, 1, 1), col = "#6C0E23", bg = "#87A5C0", bar.bg = "#6C0E23")
   })
-  output$wpText = renderPrint({
-    wp(xvar = modifyDf()$xvar, resid = resid(model()), n.inter = 12, mar = c(1, 1, 1, 1), col = "#6C0E23", bg = "#87A5C0", bar.bg = "#6C0E23")
-  })
+  # output$wpText = renderPrint({
+  #   wp(xvar = modifyDf()$xvar, resid = resid(model()), n.inter = 12, mar = rep(1, 4), col = "#6C0E23", bg = "#87A5C0", bar.bg = "#6C0E23")
+  # })
   output$wpInterpretation = renderImage({
     req(input$run)
     width  = session$clientData$output_wpInterpretation_width
@@ -256,29 +295,7 @@ server = function(input, output, session) {
     }
   )
   
-  output$downloadScores = downloadHandler(
-    filename = function() {
-      # Use the selected dataset as the suggested file name
-      paste0("centile_zscores_",input$yvar,".csv")
-    },
-    content = function(file) {
-      # Write the dataset to the `file` that will be downloaded
-      write.csv(centiles.pred(model(),type = "z-scores", xname = "xvar", 
-                              xvalues = modifyDf()$xvar, yval = modifyDf()$yvar, data = modifyDf(), plot = F), file)
-    }
-  )
   
-  output$downloadCurves = downloadHandler(
-    filename = function() {
-      # Use the selected dataset as the suggested file name
-      paste0("centile_data_",input$yvar,".csv")
-    },
-    content = function(file) {
-      # Write the dataset to the `file` that will be downloaded
-      write.csv(centiles.pred(model(), xname = "xvar", 
-                              xvalues = modifyDf()$xvar, data = modifyDf(), plot = F), file)
-    }
-  )
 }
 
 
