@@ -6,10 +6,11 @@ library(readr)
 
 getFile_debug = function(datapath = "C:/Users/chris/OneDrive - Yale University/Projects/GAMLSS/data/FINALIZEDVEP_Without6MSleep_VEP_Longitudinal_Modeling_Data_11-15-23.csv",
                          xvar = "vep_age_days", yvar = "peak_latency_P1", covariates = NULL){
-  read_csv(datapath) %>% 
-    dplyr::mutate(subject_id = as.factor(subject_id)) %>%
-    dplyr::select(subject_id:peak_latency_N2)
     # dplyr::filter(!if_any(where(is.numeric), ~ . == 99999))
+  
+  data = read_csv(datapath) %>% 
+    dplyr::mutate(subject_id = as.factor(subject_id)) %>%
+    dplyr::select(all_of(first_column):all_of(last_column))
 }
 
 

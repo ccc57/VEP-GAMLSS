@@ -15,7 +15,7 @@ library(ggplot2)
 library(shiny)
 
 # ***Edit these to for your data as needed***
-subject_id_column = "subject_id" # Name of column containing subject IDs
+# Change subject_id to the column name for the subject IDs on line 101
 first_column = "subject_id" # Choose the first column in the range of columns you wish to use
 last_column = "peak_latency_N2" # Choose the last column in the range of columns you wish to use
 default_xvar = "vep_age_days" # Choose a default explanatory variable
@@ -98,7 +98,7 @@ server = function(input, output, session) {
     req(file)
     
     data = read_csv(file$datapath) %>% 
-      dplyr::mutate(subject_id = as.factor(subject_id_column)) %>%
+      dplyr::mutate(subject_id = as.factor(subject_id)) %>%
       dplyr::select(all_of(first_column):all_of(last_column))
     
   })
