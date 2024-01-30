@@ -17,8 +17,8 @@ library(shiny)
 # ***Edit these to for your data as needed***
 # Change subject_id to the column name for the subject IDs on line 101
 first_column = "subject_id" # Choose the first column in the range of columns you wish to use
-last_column = "peak_latency_N2" # Choose the last column in the range of columns you wish to use
-default_xvar = "vep_age_days" # Choose a default explanatory variable
+last_column = "all_chans_high_gamma_1" # Choose the last column in the range of columns you wish to use
+default_xvar = "EEG_age_days" # Choose a default explanatory variable
 default_yvar = "peak_latency_P1" # Choose a default predicted variable
 
 source("run_models_shiny.R") # Contains model functions
@@ -161,7 +161,7 @@ server = function(input, output, session) {
     updateProgress = function(value) {
       progress$set(value = value)
     }
-    run_models(data = modifyDf(), 
+    model = run_models(data = modifyDf(), 
                covariates = input$covariates, 
                criterion = input$crit, 
                updateProgress = updateProgress,
@@ -174,9 +174,13 @@ server = function(input, output, session) {
   
   # Model information
   output$call = renderPrint({
-    m = model()
-    m$call[["data"]] = "data"
-    summary(m)
+    if(is.null(model()$message)){
+      m = model()
+      m$call[["data"]] = "data"
+      summary(m)
+    } else{
+      return(model()$message)
+    }
   })
   output$edf = renderPrint({
     edfAll(model())
@@ -294,8 +298,6 @@ server = function(input, output, session) {
       saveRDS(model(), file)
     }
   )
-  
-  
 }
 
 

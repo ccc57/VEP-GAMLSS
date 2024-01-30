@@ -38,7 +38,7 @@ run_models <- function(data, covariates = NULL, criterion = "BIC", updateProgres
   }
   
   # Running models
-  tryCatch(
+  model <- tryCatch(
     {
       if(criterion == "AIC"){
         model_call = call("gamlss", expr(yvar ~ !!AIC_expr_sub),
@@ -86,12 +86,19 @@ run_models <- function(data, covariates = NULL, criterion = "BIC", updateProgres
       }
     },
     error = function(e){
-      message("An error occurred in run_models_shiny.R - most likely the model failed to converge. Try a different model or criterion. Here's the error message:\n",e)
-    },
-    finally = {
-      update(4)
-      return(model)
+      model = list(message = message)
+      message = paste("An error occurred in run_models_shiny.R - most likely the model failed to converge. Try a different model or criterion. Here's the error message:\n",e)
+      warning(message)
+      return(message)
     }
   )
+  if(typeof(model) == "character"){
+    update(4)
+    return(list(message = model))
+  }
+  else {
+    update(4)
+    return(model)
+  }
 }
 
