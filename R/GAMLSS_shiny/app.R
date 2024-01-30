@@ -13,6 +13,7 @@ library(readr)
 library(dplyr)
 library(ggplot2)
 library(shiny)
+library(lattice)
 
 # ***Edit these to for your data as needed***
 # Change subject_id to the column name for the subject IDs on line 101
@@ -54,6 +55,9 @@ ui = fluidPage(
         p("Adjust 'splits' parameter to separate plots by age ranges"),
         plotOutput("centilePlot"),
         plotOutput("centileFanPlot"),
+        br(),
+        h4("Individual trajectories"),
+        plotOutput("subjectPlot"),
         br(),
         h4("Coefficients for each distribution parameter"),
         plotOutput("parameters"),
@@ -220,6 +224,27 @@ server = function(input, output, session) {
   output$centileFanPlot = renderPlot({
     centiles.fan(model(), xvar = modifyDf()$xvar, xlab = input$xvar,ylab = input$yvar,
                  points = T, colors = "cm")
+  })
+  
+  #Individual subject trajectories
+  output$subjectPlot = renderPlot({
+    if(length(model()$parameters) == 1){
+      xyplot(fitted(model(), "mu") ~ modifyDf()$xvar, 
+             groups = modifyDf()$subject_id, type = "a", scales = "free",
+             auto.key = list(space="no", points = FALSE, lines = TRUE, scales = "free"))
+    } else if(length(model()$parameters) == 2){
+      xyplot(fitted(model(), "mu") + fitted(model(), "sigma") ~ modifyDf()$xvar, 
+             groups = modifyDf()$subject_id, type = "a", scales = "free",
+             auto.key = list(space="no", points = FALSE, lines = TRUE, scales = "free"))
+    } else if(length(model()$parameters) == 3){
+      xyplot(fitted(model(), "mu") + fitted(model(), "sigma") + fitted(model(), "nu") ~ modifyDf()$xvar, 
+             groups = modifyDf()$subject_id, type = "a", scales = "free",
+             auto.key = list(space="no", points = FALSE, lines = TRUE, scales = "free"))
+    } else if(length(model()$parameters) == 4){
+      xyplot(fitted(model(), "mu") + fitted(model(), "sigma") + fitted(model(), "nu") + fitted(model(), "tau") ~ modifyDf()$xvar, 
+             groups = modifyDf()$subject_id, type = "a", scales = "free",
+             auto.key = list(space="no", points = FALSE, lines = TRUE))
+    }
   })
   
   # Download handler for downloading centile data

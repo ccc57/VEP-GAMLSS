@@ -31,9 +31,13 @@ run_models <- function(data, covariates = NULL, criterion = "BIC", updateProgres
   
   # Adding random subject effects
   if(random == TRUE){
+    # ML_expr_sub = expr(!!ML_expr + random(subject_id, lambda = lambda))
+    # AIC_expr_sub = expr(!!AIC_expr + random(subject_id, lambda = lambda))
+    # BIC_expr_sub = expr(!!BIC_expr + random(subject_id, lambda = lambda))
+    # GAIC3_expr_sub = expr(!!GAIC3_expr + random(subject_id, lambda = lambda))
     ML_expr_sub = expr(!!ML_expr + random(subject_id, lambda = lambda))
     AIC_expr_sub = expr(!!AIC_expr + random(subject_id, lambda = lambda))
-    BIC_expr_sub = expr(!!BIC_expr + random(subject_id, lambda = lambda))
+    BIC_expr_sub = expr(!!BIC_expr + re(random = ~xvar|subject_id))
     GAIC3_expr_sub = expr(!!GAIC3_expr + random(subject_id, lambda = lambda))
   }
   

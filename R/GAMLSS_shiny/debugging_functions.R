@@ -4,8 +4,10 @@ library(dplyr)
 library(readr)
 
 
-getFile_debug = function(datapath = "C:/Users/chris/OneDrive - Yale University/Projects/GAMLSS/data/FINALIZEDVEP_Without6MSleep_VEP_Longitudinal_Modeling_Data_11-15-23.csv",
-                         xvar = "vep_age_days", yvar = "peak_latency_P1", covariates = NULL){
+getFile_debug = function(datapath = "C:/Users/chris/OneDrive - Yale University/Projects/GAMLSS/data/Final_KHULA_2024.csv",
+                         xvar = "EEG_age_days", yvar = "peak_latency_P1", 
+                         first_column = "subject_id", last_column = "all_chans_high_gamma_1",
+                         covariates = NULL){
     # dplyr::filter(!if_any(where(is.numeric), ~ . == 99999))
   
   data = read_csv(datapath) %>% 
@@ -65,19 +67,40 @@ fit_model = function(model, df){
     theme_bw() + ggtitle('Mu and Sigma Model Fit')
 }
 
-centile_plot = function(model, df)({
+centile_plot = function(model, df){
   centiles(model, xvar = df$xvar, save = T)
-})
+}
 
-gamlss_debug = function(datapath = "C:/Users/chris/OneDrive - Yale University/Projects/GAMLSS/data/FINALIZEDVEP_Without6MSleep_VEP_Longitudinal_Modeling_Data_11-15-23.csv",
-                        xvar = "vep_age_days", yvar = "peak_latency_P1", covariates = NULL, lines = F, criterion = "BIC", lambda = 1, family = "NO",
+subject_plot = function(model, df){
+  if(length(model$parameters) == 1){
+    xyplot(fitted(model, "mu") ~ df$xvar, 
+           groups = df$subject_id, type = "a", scales = "free",
+           auto.key = list(space="no", points = FALSE, lines = TRUE, scales = "free"))
+  } else if(length(model$parameters) == 2){
+    xyplot(fitted(model, "mu") + fitted(model, "sigma") ~ df$xvar, 
+           groups = df$subject_id, type = "a", scales = "free",
+           auto.key = list(space="no", points = FALSE, lines = TRUE, scales = "free"))
+  } else if(length(model$parameters) == 3){
+    xyplot(fitted(model, "mu") + fitted(model, "sigma") + fitted(model, "nu") ~ df$xvar, 
+           groups = df$subject_id, type = "a", scales = "free",
+           auto.key = list(space="no", points = FALSE, lines = TRUE, scales = "free"))
+  } else if(length(model$parameters) == 4){
+    xyplot(fitted(model, "mu") + fitted(model(), "sigma") + fitted(model(), "nu") + fitted(model, "tau") ~ df$xvar, 
+           groups = df$subject_id, type = "a", scales = "free",
+           auto.key = list(space="no", points = FALSE, lines = TRUE))
+  }
+}
+
+gamlss_debug = function(datapath = "C:/Users/chris/OneDrive - Yale University/Projects/GAMLSS/data/Final_KHULA_2024.csv",
+                        xvar = "EEG_age_days", yvar = "peak_latency_P1", covariates = NULL, lines = F, criterion = "BIC", lambda = 1, family = "NO",
                         random = F) {
-  data = getFile_debug(datapath, xvar, yvar, covariates)
+  data = getFile_debug(datapath = datapath, xvar = xvar, yvar = yvar, covariates = covariates)
   df = modifyDf_debug(data, xvar, yvar, covariates)
   model = run_models(data = df, covariates = covariates, criterion = criterion, lambda = lambda, family = family, random = random)
   fp = facet_plot(data, lines)
   fit = fit_model(model, df)
   cp = centile_plot(model, df)
+  sp = subject_plot(model, df)
   centile_zscores = NULL
   centile_curves = NULL
   try({
@@ -88,6 +111,7 @@ gamlss_debug = function(datapath = "C:/Users/chris/OneDrive - Yale University/Pr
     }, silent = T)
     return(list(data = data, df = df, model = model, 
               facet_plot = fp, centile_plot = cp, fit_plot = fit, 
+              subject_plot = sp,
               centile_zscores = centile_zscores,
               centile_curves = centile_curves, datapath = datapath, 
               xvar = xvar, yvar = yvar, covariates = covariates, 
@@ -98,3 +122,15 @@ gamlss_debug = function(datapath = "C:/Users/chris/OneDrive - Yale University/Pr
 
 
 
+df_name = df
+m_re_0 = gamlss(yvar ~ re(random = ~1|subject_id),sigma.formula = ~pb(xvar), method = mixed(10,50), data = gd$df)
+fit_model(m_re_0, gd$df)
+subject_plot(m_re_0, gd$df)
+m_re_1 = gamlss(yvar ~ pb(xvar) + re(random = ~1|subject_id), method = mixed(10, 50), data = gd$df)
+fit_model(m_re_1, gd$df)
+subject_plot(m_re_1, gd$df)
+m_re_2 = gamlss(yvar ~ pb(xvar) + re(random = ~xvar|subject_id), method = mixed(10, 50), data = gd$df)
+fit_model(m_re_2, gd$df)
+subject_plot(m_re_2, gd$df)
+# 
+# 
