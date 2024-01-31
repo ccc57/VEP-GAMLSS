@@ -51,7 +51,6 @@ facet_plot = function(data, lines = F){
 
 fit_model = function(model, df){
   ypred = predictAll(model, data = df)$mu
-  # sigmapred = predictAll(model, data = df)$sigma[order(df$xvar)]
   sigmapred = fitted(model, "sigma")
   
   ggdata = cbind(ypred, sigmapred, df[,c("xvar", "yvar")])
@@ -91,12 +90,33 @@ subject_plot = function(model, df){
   }
 }
 
+run_RE_models = function(processed_df, formulas) {
+  if (length(formulas) == 1){
+    model = gamlss(eval(formulas[[1]]),
+                   data = processed_df, method = mixed(10, 50))
+  } else if (length(formulas) == 2){
+    model = gamlss(eval(formulas[[1]]), sigma.formula = eval(formulas[[2]]),
+                   data = processed_df, method = mixed(10, 50))
+  } else if (length(formulas) == 3){
+    model = gamlss(eval(formulas[[1]]), sigma.formula = eval(formulas[[2]]), nu.formula = eval(formulas[[3]]),
+                   data = processed_df, method = mixed(10, 50))
+  } else if (length(formulas) == 4){
+    model = gamlss(eval(formulas[[1]]), sigma.formula = eval(formulas[[2]]), nu.formula = eval(formulas[[3]]), tau.formula = eval(formulas[[4]]),
+                   data = processed_df, method = mixed(10, 50))
+  }
+}
+
+
 gamlss_debug = function(datapath = "C:/Users/chris/OneDrive - Yale University/Projects/GAMLSS/data/Final_KHULA_2024.csv",
                         xvar = "EEG_age_days", yvar = "peak_latency_P1", covariates = NULL, lines = F, criterion = "BIC", lambda = 1, family = "NO",
-                        random = F) {
+                        formulas = NULL){
   data = getFile_debug(datapath = datapath, xvar = xvar, yvar = yvar, covariates = covariates)
   df = modifyDf_debug(data, xvar, yvar, covariates)
-  model = run_models(data = df, covariates = covariates, criterion = criterion, lambda = lambda, family = family, random = random)
+  if(is.null(formulas)){
+    model = run_models(data = df, covariates = covariates, criterion = criterion, lambda = lambda, family = family, random = FALSE)
+  } else {
+    model = run_RE_models(processed_df = df, formulas = formulas)
+  }
   fp = facet_plot(data, lines)
   fit = fit_model(model, df)
   cp = centile_plot(model, df)
@@ -118,19 +138,3 @@ gamlss_debug = function(datapath = "C:/Users/chris/OneDrive - Yale University/Pr
               lines = lines, criterion = criterion, lambda = lambda, 
               family = family, random = random))
 }
-
-
-
-
-df_name = df
-m_re_0 = gamlss(yvar ~ re(random = ~1|subject_id),sigma.formula = ~pb(xvar), method = mixed(10,50), data = gd$df)
-fit_model(m_re_0, gd$df)
-subject_plot(m_re_0, gd$df)
-m_re_1 = gamlss(yvar ~ pb(xvar) + re(random = ~1|subject_id), method = mixed(10, 50), data = gd$df)
-fit_model(m_re_1, gd$df)
-subject_plot(m_re_1, gd$df)
-m_re_2 = gamlss(yvar ~ pb(xvar) + re(random = ~xvar|subject_id), method = mixed(10, 50), data = gd$df)
-fit_model(m_re_2, gd$df)
-subject_plot(m_re_2, gd$df)
-# 
-# 

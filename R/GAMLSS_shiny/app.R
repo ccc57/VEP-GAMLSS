@@ -58,6 +58,8 @@ ui = fluidPage(
         br(),
         h4("Individual trajectories"),
         plotOutput("subjectPlot"),
+        h4("Random Effects"),
+        plotOutput("randomEffects"),
         br(),
         h4("Coefficients for each distribution parameter"),
         plotOutput("parameters"),
@@ -67,6 +69,8 @@ ui = fluidPage(
         downloadButton("downloadModel", "Save Model"),
         downloadButton("downloadScores", "Save Centile Z Scores"),
         downloadButton("downloadCurves", "Save Centile Data"),
+        br(),
+        downloadButton("downloadRands", "Save Subject Slopes and Intercepts"),
         br(),
         h3("Model Diagnostics"),
         h4("Worm Plot"),
@@ -247,6 +251,21 @@ server = function(input, output, session) {
     }
   })
   
+  #Subject slopes and intercepts from random effects
+  output$randomEffects = renderPlot({
+    req(input$run)
+    if(input$random == TRUE){
+      re_df = data.frame(model()$mu.coefSmo[[2]]$coefficients$random$subject_id)
+      re_df$index = 1:nrow(re_df)
+      re_df = pivot_longer(re_df, cols = c("xvar","X.Intercept."), names_to = "Random Effect Component")
+      ggplot(re_df, aes(value)) + 
+        geom_density() + 
+        facet_wrap(facets = vars(`Random Effect Component`), scales = "free") + 
+        theme_bw() + 
+        theme(text = element_text(size = 15))
+    }
+  })
+  
   # Download handler for downloading centile data
   # Handler for downloading z scores
   output$downloadScores = downloadHandler(
@@ -270,6 +289,18 @@ server = function(input, output, session) {
       # Write the dataset to the `file` that will be downloaded
       write.csv(centiles.pred(model(), xname = "xvar", 
                               xvalues = modifyDf()$xvar, data = modifyDf(), plot = F), file)
+    }
+  )
+  
+  # Handler for downloading z scores
+  output$downloadRands = downloadHandler(
+    filename = function() {
+      # Use the selected dataset as the suggested file name
+      paste0("subject_values_",input$yvar,".csv")
+    },
+    content = function(file) {
+      # Write the dataset to the `file` that will be downloaded
+      write.csv(data.frame(model()$mu.coefSmo[[2]]$coefficients$random$subject_id), file)
     }
   )
   

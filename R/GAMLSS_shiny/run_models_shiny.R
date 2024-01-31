@@ -33,60 +33,96 @@ run_models <- function(data, covariates = NULL, criterion = "BIC", updateProgres
   if(random == TRUE){
     # ML_expr_sub = expr(!!ML_expr + random(subject_id, lambda = lambda))
     # AIC_expr_sub = expr(!!AIC_expr + random(subject_id, lambda = lambda))
-    # BIC_expr_sub = expr(!!BIC_expr + random(subject_id, lambda = lambda))
+    # BIC_expr_sub = expr(!!BIC_expr + re(random = ~xvar|subject_id))
     # GAIC3_expr_sub = expr(!!GAIC3_expr + random(subject_id, lambda = lambda))
-    ML_expr_sub = expr(!!ML_expr + random(subject_id, lambda = lambda))
-    AIC_expr_sub = expr(!!AIC_expr + random(subject_id, lambda = lambda))
+    ML_expr_sub = expr(!!ML_expr + re(random = ~xvar|subject_id))
+    AIC_expr_sub = expr(!!AIC_expr + re(random = ~xvar|subject_id))
     BIC_expr_sub = expr(!!BIC_expr + re(random = ~xvar|subject_id))
-    GAIC3_expr_sub = expr(!!GAIC3_expr + random(subject_id, lambda = lambda))
+    GAIC3_expr_sub = expr(!!GAIC3_expr + re(random = ~xvar|subject_id))
   }
   
   # Running models
   model <- tryCatch(
     {
-      if(criterion == "AIC"){
-        model_call = call("gamlss", expr(yvar ~ !!AIC_expr_sub),
-                          sigma.fo = expr(~ !!AIC_expr), 
-                          tau.formula = expr(~ !!AIC_expr),
-                          nu.formula = expr(~ !!AIC_expr),
-                          family = family,
-                          method = expr(mixed(10, 50)),
-                          data = data)
-        model = eval(model_call)
-      } else if(criterion == "ML"){
-        model_call = call("gamlss", expr(yvar ~ !!ML_expr_sub),
-                          sigma.fo = expr(~ !!ML_expr), 
-                          tau.formula = expr(~ !!ML_expr),
-                          nu.formula = expr(~ !!ML_expr),
-                          family = family,
-                          method = expr(mixed(10, 50)),
-                          data = data)
-        model = eval(model_call)
-      } else if(criterion == "BIC"){
-        model_call = call("gamlss", expr(yvar ~ !!BIC_expr_sub),
-                        sigma.fo = expr(~ !!BIC_expr), 
-                        tau.formula = expr(~ !!BIC_expr),
-                        nu.formula = expr(~ !!BIC_expr),
-                        family = family,
-                        method = expr(mixed(10, 50)),
-                        data = data)
-        model = eval(model_call)
-        # model = gamlss(eval(expr(yvar ~ !!BIC_expr_sub)), 
-        #                       sigma.fo = eval(expr(~ !!BIC_expr)), 
-        #                       tau.formula = eval(expr(~ !!BIC_expr)), 
-        #                       nu.formula = eval(expr(~ !!BIC_expr)), 
-        #                       family = family,
-        #                       method = mixed(10, 50), 
-        #                       data = data)
-      } else if(criterion == "GAIC3"){
-        model_call = call("gamlss", expr(yvar ~ !!GAIC3_expr_sub),
-                          sigma.fo = expr(~ !!GAIC3_expr), 
-                          tau.formula = expr(~ !!GAIC3_expr),
-                          nu.formula = expr(~ !!GAIC3_expr),
-                          family = family,
-                          method = expr(mixed(10, 50)),
-                          data = data)
-        model = eval(model_call)
+      if(random == FALSE){
+        if(criterion == "AIC"){
+          model_call = call("gamlss", expr(yvar ~ !!AIC_expr_sub),
+                            sigma.fo = expr(~ !!AIC_expr), 
+                            tau.formula = expr(~ !!AIC_expr),
+                            nu.formula = expr(~ !!AIC_expr),
+                            family = family,
+                            method = expr(mixed(10, 50)),
+                            data = data)
+          model = eval(model_call)
+        } else if(criterion == "ML"){
+          model_call = call("gamlss", expr(yvar ~ !!ML_expr_sub),
+                            sigma.fo = expr(~ !!ML_expr), 
+                            tau.formula = expr(~ !!ML_expr),
+                            nu.formula = expr(~ !!ML_expr),
+                            family = family,
+                            method = expr(mixed(10, 50)),
+                            data = data)
+          model = eval(model_call)
+        } else if(criterion == "BIC"){
+          model_call = call("gamlss", expr(yvar ~ !!BIC_expr_sub),
+                            sigma.fo = expr(~ !!BIC_expr), 
+                            tau.formula = expr(~ !!BIC_expr),
+                            nu.formula = expr(~ !!BIC_expr),
+                            family = family,
+                            method = expr(mixed(10, 50)),
+                            data = data)
+          model = eval(model_call)
+          # model = gamlss(eval(expr(yvar ~ !!BIC_expr_sub)), 
+          #                       sigma.fo = eval(expr(~ !!BIC_expr)), 
+          #                       tau.formula = eval(expr(~ !!BIC_expr)), 
+          #                       nu.formula = eval(expr(~ !!BIC_expr)), 
+          #                       family = family,
+          #                       method = mixed(10, 50), 
+          #                       data = data)
+        } else if(criterion == "GAIC3"){
+          model_call = call("gamlss", expr(yvar ~ !!GAIC3_expr_sub),
+                            sigma.fo = expr(~ !!GAIC3_expr), 
+                            tau.formula = expr(~ !!GAIC3_expr),
+                            nu.formula = expr(~ !!GAIC3_expr),
+                            family = family,
+                            method = expr(mixed(10, 50)),
+                            data = data)
+          model = eval(model_call)
+        }
+      }
+      else {
+        if(criterion == "AIC"){
+          model_call = call("gamlss", expr(yvar ~ !!AIC_expr_sub),
+                            family = family,
+                            method = expr(mixed(10, 50)),
+                            data = data)
+          model = eval(model_call)
+        } else if(criterion == "ML"){
+          model_call = call("gamlss", expr(yvar ~ !!ML_expr_sub),
+                            family = family,
+                            method = expr(mixed(10, 50)),
+                            data = data)
+          model = eval(model_call)
+        } else if(criterion == "BIC"){
+          model_call = call("gamlss", expr(yvar ~ !!BIC_expr_sub),
+                            family = family,
+                            method = expr(mixed(10,50)),
+                            data = data)
+          model = eval(model_call)
+          # model = gamlss(eval(expr(yvar ~ !!BIC_expr_sub)), 
+          #                       sigma.fo = eval(expr(~ !!BIC_expr)), 
+          #                       tau.formula = eval(expr(~ !!BIC_expr)), 
+          #                       nu.formula = eval(expr(~ !!BIC_expr)), 
+          #                       family = family,
+          #                       method = mixed(10, 50), 
+          #                       data = data)
+        } else if(criterion == "GAIC3"){
+          model_call = call("gamlss", expr(yvar ~ !!GAIC3_expr_sub),
+                            family = family,
+                            method = expr(mixed(10, 50)),
+                            data = data)
+          model = eval(model_call)
+        }
       }
     },
     error = function(e){
