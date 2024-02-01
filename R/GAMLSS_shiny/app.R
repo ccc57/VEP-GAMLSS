@@ -117,12 +117,12 @@ server = function(input, output, session) {
     df = getFile()
     df = df %>% dplyr::filter(!if_any(c(input$xvar, input$yvar, all_of(input$covariates)), ~ . == 99999))
     if(!is.null(input$covariates)){
-      df = df[,c("subject_id", input$xvar, input$yvar, input$covariates)]
+      df = df[,c("subject_id","synchronized_timepoint", input$xvar, input$yvar, input$covariates)]
       covnames = sprintf("covariate%d", 1:(length(input$covariates)))
-      colnames(df) = c("subject_id","xvar","yvar",covnames)
+      colnames(df) = c("subject_id","synchronized_timepoint","xvar","yvar",covnames)
     } else{
-      df = df[,c("subject_id", input$xvar, input$yvar)]
-      colnames(df) = c("subject_id","xvar","yvar")
+      df = df[,c("subject_id","synchronized_timepoint", input$xvar, input$yvar)]
+      colnames(df) = c("subject_id","synchronized_timepoint","xvar","yvar")
     }
     df
   })
@@ -275,8 +275,11 @@ server = function(input, output, session) {
     },
     content = function(file) {
       # Write the dataset to the `file` that will be downloaded
-      write.csv(centiles.pred(model(),type = "z-scores", xname = "xvar", 
-                              xvalues = modifyDf()$xvar, yval = modifyDf()$yvar, data = modifyDf(), plot = F), file)
+      write_df = data.frame(cbind(modifyDf()$subject_id,modifyDf()$synchronized_timepoint,
+            centiles.pred(model(),type = "z-scores", xname = "xvar", 
+                          xvalues = modifyDf()$xvar, yval = modifyDf()$yvar, data = modifyDf(), plot = F)))
+      colnames(write_df)[1:3] = c("subject_id","synchronized_timepoint","zscore")
+      write.csv(write_df,row.names = F, file = file)
     }
   )
   # Handler for downloading centile curves
@@ -287,8 +290,10 @@ server = function(input, output, session) {
     },
     content = function(file) {
       # Write the dataset to the `file` that will be downloaded
-      write.csv(centiles.pred(model(), xname = "xvar", 
-                              xvalues = modifyDf()$xvar, data = modifyDf(), plot = F), file)
+      write_df = data.frame(cbind(modifyDf()$subject_id,modifyDf()$synchronized_timepoint,
+                                  centiles.pred(model(), xname = "xvar", xvalues = modifyDf()$xvar, data = modifyDf(), plot = F)))
+      colnames(write_df)[1:3] = c("subject_id","synchronized_timepoint","age")
+      write.csv(write_df, file = file, row.names = F)
     }
   )
   

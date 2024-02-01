@@ -107,6 +107,9 @@ run_RE_models = function(processed_df, formulas) {
 }
 
 
+x_dataset_pred = function(ds1, ds2, xvar, yvar)
+
+
 gamlss_debug = function(datapath = "C:/Users/chris/OneDrive - Yale University/Projects/GAMLSS/data/Final_KHULA_2024.csv",
                         xvar = "EEG_age_days", yvar = "peak_latency_P1", covariates = NULL, lines = F, criterion = "BIC", lambda = 1, family = "NO",
                         formulas = NULL){
